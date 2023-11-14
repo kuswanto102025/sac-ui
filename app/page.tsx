@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeftRight, Check, ClipboardCopy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -35,6 +35,7 @@ export interface Eligibility {
 export default function IndexPage() {
   const { toast } = useToast();
   const [addresses, setAddresses] = useState<string[]>([]);
+  const [addressesText, setAddressesText] = useState<string>("");
   const [eligibility, setEligibility] = useState<{
     address: string;
     jupiterEligible: boolean;
@@ -114,6 +115,10 @@ export default function IndexPage() {
       return results;
   }
 
+  useEffect(() => {
+    processAddresses(addressesText);
+  }, [addressesText]);
+
   return (
     <section className="container grid items-center gap-6 pb-8 pt-6 md:py-10">
       <div className="flex max-w-[980px] flex-col items-start gap-2">
@@ -140,9 +145,9 @@ export default function IndexPage() {
           <Textarea
             placeholder="Paste address here."
             onChange={(e) => {
-              processAddresses(e.target.value);
+              setAddressesText(e.target.value);
             }}
-            value={addresses.join("\n")}
+            value={addressesText}
             className="h-[300px]"
           />
         </div>
