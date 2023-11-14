@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ReloadIcon } from "@radix-ui/react-icons";
 
 export interface EligibilityResponse {
   address: string;
@@ -36,9 +37,14 @@ export default function IndexPage() {
   const [addresses, setAddresses] = useState<string[]>([]);
   const [eligibility, setEligibility] = useState<{
     address: string;
-    jupiter: boolean;
-    pyth: boolean;
+    jupiterEligible: boolean;
+    jupiterVolume: number;
+    jupiterNote: string;
+    pythEligible: boolean;
+    pythPoints: number;
+    pythNote: string;
   }[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
 
   function processAddresses(addresses: string) {
      // input can be comma separated or newline separated
@@ -74,21 +80,32 @@ export default function IndexPage() {
   async function fetchDataForAddresses(addresses: string[]) {
       const batchSize = 10;
       const results: { 
-          address: string; 
-          pythPoints: number;
-          jupiterVolume: number;
+        address: string;
+        jupiterEligible: boolean;
+        jupiterVolume: number;
+        jupiterNote: string;
+        pythEligible: boolean;
+        pythPoints: number;
+        pythNote: string;
       }[] = [];
 
       for (let i = 0; i < addresses.length; i += batchSize) {
         const batch = addresses.slice(i, i + batchSize);
         const batchResults = await Promise.all(batch.map(async (address) => {
             const data = await fetchData(address);
-            const pythPoints = data.eligibility.find((e) => e.protocol === "pyth")?.amount || 0;
-            const jupiterVolume = data.eligibility.find((e) => e.protocol === "jupiter")?.amount || 0;
+            const pythEligible = data.eligibility.find((e) => e.protocol === 'pyth');
+            const jupiterEligible = data.eligibility.find((e) => e.protocol === 'jupiter');
+            const pythPoints = pythEligible ? pythEligible.amount : 0;
+            const jupiterVolume = jupiterEligible ? jupiterEligible.amount : 0;
+            
             return {
-                address,
-                pythPoints,
-                jupiterVolume,
+              address,
+              jupiterEligible: jupiterEligible ? jupiterEligible.eligible : false,
+              jupiterVolume,
+              jupiterNote: jupiterEligible ? jupiterEligible.note : '',
+              pythEligible: pythEligible ? pythEligible.eligible : false,
+              pythPoints,
+              pythNote: pythEligible ? pythEligible.note : '',
             }
         }));
         results.push(...batchResults);
@@ -151,12 +168,15 @@ export default function IndexPage() {
             variant="default"
             onClick={async () => {
               try {
+                setLoading(true);
+                toast({
+                  title: "Fetching data...",
+                  description: `Checking ${addresses.length} addresses`,
+                  duration: 5000,
+                }); 
+                setEligibility([]);
                 const results = await fetchDataForAddresses(addresses);
-                setEligibility(results.map((result) => ({
-                  address: result.address,
-                  jupiter: result.jupiterVolume > 0,
-                  pyth: result.pythPoints > 0,
-                })));
+                setEligibility(results);
                 toast({
                   title: "Success",
                   description: `Successfully checked ${addresses.length} addresses.`,
@@ -168,11 +188,15 @@ export default function IndexPage() {
                   title: "Error",
                   description: `${e.message}`,
                   duration: 5000,
+                  variant: 'destructive'
                 })
               }
+              setLoading(false);
             }}
+            disabled={loading}
           >
-            <ArrowLeftRight className="mr-2 h-4 w-4" /> Check
+            {loading && <><ReloadIcon className="mr-2 h-4 w-4 animate-spin"/> Checking...</>}
+            {!loading && <><ArrowLeftRight className="mr-2 h-4 w-4" /> Check</>}
           </Button>
         </div>
       </div>
@@ -192,30 +216,44 @@ export default function IndexPage() {
             <TableRow>
               <TableHead className="w-[100px]"></TableHead>
               <TableHead>Address</TableHead>
-              <TableHead>Jupiter</TableHead>
-              <TableHead>Pyth</TableHead>
+              <TableHead>Eligible for Jupiter</TableHead>
+              <TableHead>Jupiter Volume</TableHead>
+              <TableHead>Eligible for Pyth</TableHead>
+              <TableHead>Pyth Points</TableHead>
               <TableHead className="text-right">Eligible for any</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {eligibility.map((e, index) => (
-              <TableRow key={e.address}>
-                <TableCell className="font-medium">{index+1}</TableCell>
-                <TableCell>{e.address}</TableCell>
-                <TableCell>{e.jupiter ? '✅' : '❌'}</TableCell>
-                <TableCell>{e.pyth ? '✅' : '❌'}</TableCell>
-                <TableCell className="text-right">
-                  {e.jupiter || e.pyth ? '✅' : '❌'}
-                </TableCell>
-              </TableRow>
-            ))}
-            {/* <TableRow>
-              <TableCell className="font-medium">1</TableCell>
-              <TableCell>HAwiWQnFY4vuEfWaZbF6LAvLuGUsrk5mtdQF8rDNYh3b</TableCell>
-              <TableCell>✅</TableCell>
-              <TableCell>❌</TableCell>
-              <TableCell className="text-right">✅</TableCell>
-            </TableRow> */}
+            {eligibility.map((e) => {
+              return (
+                <TableRow key={e.address}>
+                  <TableCell className="font-medium">{eligibility.indexOf(e) + 1}</TableCell>
+                  <TableCell className="font-medium">{e.address}</TableCell>
+                  <TableCell>{e.jupiterEligible ? '✅' : '❌'}</TableCell>
+                  <TableCell>{e.jupiterVolume.toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                    minimumFractionDigits: 2,
+                  })}</TableCell>
+                  {/* <TableCell>{e.jupiterNote}</TableCell> */}
+                  <TableCell>{e.pythEligible ? '✅' : '❌'}</TableCell>
+                  <TableCell>{e.pythPoints}</TableCell>
+                  <TableCell className="text-right">{e.jupiterEligible || e.pythEligible ? '✅' : '❌'}</TableCell>
+                </TableRow>
+              )
+            })}
+            {/* sum row */}
+            <TableRow>
+              <TableCell className="font-medium">Total</TableCell>
+              <TableCell className="font-medium"></TableCell>
+              <TableCell></TableCell>
+              <TableCell>{eligibility.reduce((a, b) => a + b.jupiterVolume, 0).toLocaleString(undefined, {
+                    maximumFractionDigits: 2,
+                    minimumFractionDigits: 2,
+                  })}</TableCell>
+              <TableCell></TableCell>
+              <TableCell>{eligibility.reduce((a, b) => a + b.pythPoints, 0)}</TableCell>
+              <TableCell className="text-right"></TableCell>
+            </TableRow>
           </TableBody>
         </Table>
       </div>
