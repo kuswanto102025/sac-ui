@@ -56,11 +56,15 @@ export default function IndexPage() {
 
     if (addresses.includes(",")) {
       setAddresses(addresses.split(","));
+      return;
     }
 
     if (addresses.includes("\n")) {
       setAddresses(addresses.split("\n"));
+      return;
     }
+
+    setAddresses(addresses.split("\n"));
   }
 
   async function fetchData(address: string): Promise<EligibilityResponse> {
