@@ -121,7 +121,7 @@ export default function IndexPage() {
           Check eligibility for different Solana airdrops 🔍
         </p>
         <h1 className="text-3xl font-extrabold leading-tight tracking-tighter md:text-4xl">
-          Airdrop Eligibility Checker
+          Solana Airdrop Checker
         </h1>
       </div>
       <Separator />

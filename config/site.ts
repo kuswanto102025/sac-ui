@@ -1,7 +1,7 @@
 export type SiteConfig = typeof siteConfig
 
 export const siteConfig = {
-  name: "Airdrop Eligibility",
+  name: "Solana Airdrop Checker",
   description:
     "Check eligibility for airdrops on Solana. Airdrop Eligibility is a tool that allows you to check if your Solana wallet is eligible for airdrops (JUP and PYTH only).",
   mainNav: [],
